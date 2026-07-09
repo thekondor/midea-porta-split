@@ -220,6 +220,13 @@ func TestParseC0Body_IndoorTemp(t *testing.T) {
 	if r.IndoorTemp != 30.0 {
 		t.Errorf("IndoorTemp=30C: got %.1f, want 30.0", r.IndoorTemp)
 	}
+
+	// 25.5 deg C: raw = 50 + 2*25 + 1 = 101.
+	body[11] = 101
+	r, _ = parseC0Body(body)
+	if r.IndoorTemp != 25.5 {
+		t.Errorf("IndoorTemp=25.5C: got %.1f, want 25.5", r.IndoorTemp)
+	}
 }
 
 func TestParseC0Body_OutdoorTemp(t *testing.T) {
@@ -236,6 +243,13 @@ func TestParseC0Body_OutdoorTemp(t *testing.T) {
 	r, _ = parseC0Body(body)
 	if r.OutdoorTemp != 35.0 {
 		t.Errorf("OutdoorTemp=35C: got %.1f, want 35.0", r.OutdoorTemp)
+	}
+
+	// 35.5 deg C: raw = 50 + 2*35 + 1 = 121.
+	body[12] = 121
+	r, _ = parseC0Body(body)
+	if r.OutdoorTemp != 35.5 {
+		t.Errorf("OutdoorTemp=35.5C: got %.1f, want 35.5", r.OutdoorTemp)
 	}
 }
 

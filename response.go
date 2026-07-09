@@ -48,29 +48,29 @@ func parseC0Body(body []byte) (Response, error) {
 
 	// Indoor temperature: (raw - 50) / 2.0; 0xFF = absent.
 	if body[11] != 0xFF {
-		raw := int(body[11]-50) / 2
+		raw := float64(int(body[11])-50) / 2.0
 		tempDec := 0.0
 		if len(body) > 15 {
 			tempDec = float64(body[15]&0x0F) * 0.1
 		}
 		if body[11] > 49 {
-			r.IndoorTemp = float64(raw) + tempDec
+			r.IndoorTemp = raw + tempDec
 		} else {
-			r.IndoorTemp = float64(raw) - tempDec
+			r.IndoorTemp = raw - tempDec
 		}
 	}
 
 	// Outdoor temperature: same encoding.
 	if body[12] != 0xFF {
-		raw := int(body[12]-50) / 2
+		raw := float64(int(body[12])-50) / 2.0
 		tempDec := 0.0
 		if len(body) > 15 {
 			tempDec = float64((body[15]&0xF0)>>4) * 0.1
 		}
 		if body[12] > 49 {
-			r.OutdoorTemp = float64(raw) + tempDec
+			r.OutdoorTemp = raw + tempDec
 		} else {
-			r.OutdoorTemp = float64(raw) - tempDec
+			r.OutdoorTemp = raw - tempDec
 		}
 	}
 
