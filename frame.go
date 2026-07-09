@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -25,6 +26,11 @@ const (
 // of 16, then AES-128-CBC-encrypt with tcpKey and append a SHA-256 signature.
 // reqCount is incremented and wraps at 0xFFFF.
 func encode8370(data []byte, msgtype uint8, tcpKey []byte, reqCount *uint16) []byte {
+	return encode8370WithRand(data, msgtype, tcpKey, reqCount, rand.Reader)
+}
+
+// encode8370WithRand is the testable core of encode8370; rnd supplies padding bytes.
+func encode8370WithRand(data []byte, msgtype uint8, tcpKey []byte, reqCount *uint16, rnd io.Reader) []byte {
 	size := len(data)
 	padding := 0
 
@@ -32,8 +38,8 @@ func encode8370(data []byte, msgtype uint8, tcpKey []byte, reqCount *uint16) []b
 		if (size+2)%16 != 0 {
 			padding = 16 - ((size + 2) & 0xF)
 			randPad := make([]byte, padding)
-			if _, err := rand.Read(randPad); err != nil {
-				panic("midea: rand.Read failed: " + err.Error())
+			if _, err := io.ReadFull(rnd, randPad); err != nil {
+				panic("midea: rand read failed: " + err.Error())
 			}
 			data = append(data, randPad...)
 		}
@@ -137,18 +143,20 @@ func decode8370(buf, tcpKey []byte) (packets [][]byte, leftover []byte, err erro
 
 // bcdTimestamp returns the 8-byte reversed-decimal BCD timestamp encoding used
 // in the 5A5A packet header (bytes 12-19).
+func bcdTimestamp() []byte { return bcdTimestampFor(time.Now()) }
+
+// bcdTimestampFor encodes t as an 8-byte reversed BCD timestamp.
 //
-// Format: take the current time as a 16-char string "YYYYMMDDHHMMSSuu"
+// Format: take the time as a 16-char string "YYYYMMDDHHMMSSuu"
 // (uu = microsecond hundreds), convert each 2-char pair to a byte value, then
 // reverse the byte order so the least-significant time unit (hundredths of a
 // second) is at the lowest address.
-func bcdTimestamp() []byte {
-	now := time.Now()
-	t := now.Format("20060102150405") + fmt.Sprintf("%02d", now.Nanosecond()/10000000)
-	// t is 16 chars → 8 pairs
+func bcdTimestampFor(t time.Time) []byte {
+	s := t.Format("20060102150405") + fmt.Sprintf("%02d", t.Nanosecond()/10000000)
+	// s is 16 chars → 8 pairs
 	b := make([]byte, 8)
 	for i := 0; i < 8; i++ {
-		pair := t[i*2 : i*2+2]
+		pair := s[i*2 : i*2+2]
 		var v int
 		_, _ = fmt.Sscanf(pair, "%d", &v)
 		b[7-i] = byte(v) // insert in reverse order
